@@ -4,20 +4,17 @@
   "private": true,
   "description": "Type Rush - Modern Real-Time Typing Competition Platform",
   "scripts": {
-    "postinstall": "npm install --prefix backend && npm install --prefix student-portal && npm install --prefix admin-portal",
-    "install:all": "npm install && npm run postinstall",
     "dev:backend": "npm run dev --prefix backend",
     "dev:student": "npm run dev --prefix student-portal",
     "dev:admin": "npm run dev --prefix admin-portal",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:student\" \"npm run dev:admin\"",
-    "build:student": "npm run build --prefix student-portal",
-    "build:admin": "npm run build --prefix admin-portal",
-    "build:backend": "echo 'Backend does not require build step'",
-    "build": "npm run postinstall && npm run build:student && npm run build:admin",
-    "vercel-build": "npm run postinstall && npm run build:student && npm run build:admin"
+    "build:student": "cd student-portal && npm install && npm run build",
+    "build:admin": "cd admin-portal && npm install && npm run build",
+    "build:backend": "cd backend && npm install",
+    "build": "npm run build:student && npm run build:admin",
+    "vercel-build": "npm run build"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2",
-    "vite": "^5.4.2"
+    "concurrently": "^8.2.2"
   }
 }
