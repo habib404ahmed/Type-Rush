@@ -11,7 +11,7 @@
     "build:student": "cd student-portal && npm install && npm run build",
     "build:admin": "cd admin-portal && npm install && npm run build",
     "build:backend": "cd backend && npm install",
-    "build": "npm run build:student && npm run build:admin",
+    "build": "npm run build:student && npm run build:admin && node -e \"require('fs').cpSync('student-portal/dist', 'dist', {recursive: true})\"",
     "vercel-build": "npm run build"
   },
   "devDependencies": {
