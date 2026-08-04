@@ -134,9 +134,9 @@ $$\text{Final Score} = \max\left(0, \text{Math.round}((\text{Net WPM} \times 10)
 
 ---
 
-## 🛠️ Production Build Verification
+---
 
-To verify production bundle compilation for Student Portal and Admin Panel:
-```bash
-npm run build
-```
+## ⚡ Vercel Deployment Note
+- Automatically installs sub-dependencies via `vercel-build` script.
+- Configured for Vercel production deployment.
+
