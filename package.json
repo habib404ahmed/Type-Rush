@@ -13,7 +13,8 @@
     "build:student": "npm run build --prefix student-portal",
     "build:admin": "npm run build --prefix admin-portal",
     "build:backend": "echo 'Backend does not require build step'",
-    "build": "npm run build:student && npm run build:admin"
+    "build": "npm run postinstall && npm run build:student && npm run build:admin",
+    "vercel-build": "npm run postinstall && npm run build:student && npm run build:admin"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
