@@ -17,6 +17,7 @@
     "vercel-build": "npm run postinstall && npm run build:student && npm run build:admin"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "vite": "^5.4.2"
   }
 }
