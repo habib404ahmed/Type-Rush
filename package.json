@@ -4,7 +4,8 @@
   "private": true,
   "description": "Type Rush - Modern Real-Time Typing Competition Platform",
   "scripts": {
-    "install:all": "npm install && npm install --prefix backend && npm install --prefix student-portal && npm install --prefix admin-portal",
+    "postinstall": "npm install --prefix backend && npm install --prefix student-portal && npm install --prefix admin-portal",
+    "install:all": "npm install && npm run postinstall",
     "dev:backend": "npm run dev --prefix backend",
     "dev:student": "npm run dev --prefix student-portal",
     "dev:admin": "npm run dev --prefix admin-portal",
