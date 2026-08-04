@@ -1,0 +1,20 @@
+{
+  "name": "type-rush-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Type Rush - Modern Real-Time Typing Competition Platform",
+  "scripts": {
+    "install:all": "npm install && npm install --prefix backend && npm install --prefix student-portal && npm install --prefix admin-portal",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:student": "npm run dev --prefix student-portal",
+    "dev:admin": "npm run dev --prefix admin-portal",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:student\" \"npm run dev:admin\"",
+    "build:student": "npm run build --prefix student-portal",
+    "build:admin": "npm run build --prefix admin-portal",
+    "build:backend": "echo 'Backend does not require build step'",
+    "build": "npm run build:student && npm run build:admin"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
