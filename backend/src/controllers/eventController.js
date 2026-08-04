@@ -3,10 +3,10 @@ import { Student } from '../models/Student.js';
 import { Log } from '../models/Log.js';
 import { generateEventCode } from '../utils/generateEventCode.js';
 
-// Helper to construct dynamic student join URL
+// Helper to construct dynamic Vercel student join URL
 const getJoinUrl = (eventCode) => {
-  const baseUrl = process.env.CLIENT_STUDENT_URL || 'http://localhost:5173';
-  return `${baseUrl.replace(/\/$/, '')}/student/${eventCode}`;
+  const baseUrl = process.env.CLIENT_STUDENT_URL || 'https://typing-student.vercel.app';
+  return `${baseUrl.replace(/\/$/, '')}/register/${eventCode}`;
 };
 
 // @desc    Get currently active event (for Permanent Dashboard QR Card & Student Flow)
@@ -21,7 +21,6 @@ export const getActiveEvent = async (req, res, next) => {
       .sort({ updatedAt: -1 })
       .select('-createdBy');
 
-    // Fallback to most recent non-deleted event if no event is currently active
     if (!event) {
       event = await Event.findOne({ isDeleted: false })
         .sort({ createdAt: -1 })

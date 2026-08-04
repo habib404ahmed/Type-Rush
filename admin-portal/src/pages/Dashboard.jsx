@@ -12,7 +12,7 @@ import {
   Copy,
   Download,
   Printer,
-  RefreshCw,
+  ExternalLink,
   Play,
   Check,
   QrCode,
@@ -35,7 +35,13 @@ export const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [toasts, setToasts] = useState([]);
   const [copySuccess, setCopySuccess] = useState(false);
-  const [refreshingQr, setRefreshingQr] = useState(false);
+
+  // Helper to compute Vercel production student registration URL
+  const getStudentRegisterUrl = (eventCode) => {
+    const studentBase =
+      import.meta.env.VITE_STUDENT_URL || 'https://typing-student.vercel.app';
+    return `${studentBase.replace(/\/$/, '')}/register/${eventCode}`;
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -59,20 +65,6 @@ export const Dashboard = () => {
     }
   };
 
-  const handleRefreshActiveEvent = async () => {
-    setRefreshingQr(true);
-    try {
-      const activeRes = await api.get('/events/active');
-      if (activeRes.success && activeRes.event) {
-        setActiveEvent(activeRes.event);
-      }
-    } catch (err) {
-      console.error('Refresh active event error:', err);
-    } finally {
-      setTimeout(() => setRefreshingQr(false), 500);
-    }
-  };
-
   const addToast = (type, title, message) => {
     const id = Date.now();
     setToasts((prev) => [{ id, type, title, message }, ...prev.slice(0, 4)]);
@@ -84,12 +76,11 @@ export const Dashboard = () => {
   useEffect(() => {
     fetchDashboardData();
 
-    // Socket.IO listeners
     socket.on('new_registration', (data) => {
       addToast(
         'info',
-        'New Participant Registered! 🎓',
-        `${data.name} (${data.department}) joined the competition.`
+        'New Student Registered! 🎓',
+        `${data.name} (${data.department}) registered for the test.`
       );
       fetchDashboardData();
     });
@@ -106,8 +97,8 @@ export const Dashboard = () => {
     socket.on('anti_cheat_alert', (data) => {
       addToast(
         'warning',
-        'Anti-Cheat Warning Alert ⚠️',
-        `Violation warning #${data.warningCount}: ${data.reason}`
+        'Anti-Cheat Violation Alert ⚠️',
+        `Warning #${data.warningCount}: ${data.reason}`
       );
     });
 
@@ -141,12 +132,36 @@ export const Dashboard = () => {
     document.body.removeChild(downloadLink);
   };
 
+  // 1-Click SVG Download
+  const downloadQrSvg = () => {
+    if (!activeEvent) return;
+    const svgElement = document.getElementById('dashboard-qr-svg');
+    if (!svgElement) return;
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const svgUrl = URL.createObjectURL(svgBlob);
+    const downloadLink = document.createElement('a');
+    downloadLink.href = svgUrl;
+    downloadLink.download = `TypeRush_QR_${activeEvent.eventCode}.svg`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  };
+
   // Copy Student Link with Toast
   const copyJoinUrl = () => {
     if (!activeEvent) return;
-    navigator.clipboard.writeText(activeEvent.joinUrl);
+    const targetUrl = getStudentRegisterUrl(activeEvent.eventCode);
+    navigator.clipboard.writeText(targetUrl);
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 3000);
+  };
+
+  // Open Student Registration Page in New Tab
+  const openStudentPage = () => {
+    if (!activeEvent) return;
+    const targetUrl = getStudentRegisterUrl(activeEvent.eventCode);
+    window.open(targetUrl, '_blank');
   };
 
   // Print QR Code View
@@ -155,46 +170,53 @@ export const Dashboard = () => {
     const canvas = document.getElementById('dashboard-qr-canvas');
     if (!canvas) return;
     const qrDataUrl = canvas.toDataURL('image/png');
+    const studentUrl = getStudentRegisterUrl(activeEvent.eventCode);
 
     const printWindow = window.open('', '_blank', 'width=650,height=750');
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Print QR Code - ${activeEvent.title}</title>
+          <title>Print Student QR Code - ${activeEvent.title}</title>
           <style>
             body {
               font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
               text-align: center;
               padding: 40px;
               color: #0f172a;
-              background-color: #f8fafc;
+              background-color: #ffffff;
             }
             .card {
-              border: 3px solid #6366f1;
+              border: 3px solid #4f46e5;
               border-radius: 24px;
               padding: 36px;
               max-width: 440px;
               margin: 0 auto;
               background: #ffffff;
-              box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+              box-shadow: 0 10px 30px rgba(0,0,0,0.06);
             }
-            .header-badge {
-              font-size: 12px;
-              font-weight: 800;
-              letter-spacing: 1px;
-              color: #4f46e5;
+            .college-logo {
+              font-size: 14px;
+              font-weight: 900;
+              letter-spacing: 2px;
+              color: #4338ca;
               text-transform: uppercase;
-              margin-bottom: 8px;
+              margin-bottom: 4px;
             }
-            h1 { font-size: 26px; margin: 0 0 12px 0; color: #1e1b4b; line-height: 1.2; }
+            .college-name {
+              font-size: 12px;
+              font-weight: 700;
+              color: #64748b;
+              margin-bottom: 16px;
+            }
+            h1 { font-size: 24px; margin: 0 0 12px 0; color: #1e1b4b; line-height: 1.2; }
             .code-pill {
               font-family: 'Courier New', Courier, monospace;
-              font-size: 22px;
+              font-size: 20px;
               font-weight: bold;
               background: #e0e7ff;
               color: #3730a3;
-              padding: 6px 18px;
+              padding: 6px 16px;
               border-radius: 12px;
               display: inline-block;
               margin-bottom: 20px;
@@ -207,21 +229,22 @@ export const Dashboard = () => {
               border: 2px solid #e2e8f0;
             }
             img { width: 260px; height: 260px; display: block; }
-            .instruction { font-size: 13px; font-weight: 600; color: #475569; margin-top: 20px; }
-            .url { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #6366f1; word-break: break-all; margin-top: 8px; font-weight: bold; }
+            .instruction { font-size: 13px; font-weight: 700; color: #334155; margin-top: 20px; }
+            .url { font-family: 'Courier New', Courier, monospace; font-size: 12px; color: #4f46e5; word-break: break-all; margin-top: 8px; font-weight: bold; }
           </style>
         </head>
         <body>
           <div class="card">
-            <div class="header-badge">College Championship • Type Rush</div>
+            <div class="college-logo">🎓 TYPE RUSH CHAMPIONSHIP</div>
+            <div class="college-name">Official College Typing Competition</div>
             <h1>${activeEvent.title}</h1>
             <div class="code-pill">EVENT CODE: ${activeEvent.eventCode}</div>
             <br />
             <div class="qr-wrapper">
               <img src="${qrDataUrl}" alt="Student Registration QR Code" />
             </div>
-            <div class="instruction">Scan with phone camera to join typing test</div>
-            <div class="url">${activeEvent.joinUrl}</div>
+            <div class="instruction">Scan with phone camera to open Student Registration</div>
+            <div class="url">${studentUrl}</div>
           </div>
           <script>
             window.onload = function() {
@@ -348,7 +371,7 @@ export const Dashboard = () => {
         </p>
       </div>
 
-      {/* Top 4 Dashboard Metric Cards */}
+      {/* Top 4 Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {statsCards.map((stat, index) => {
           const Icon = stat.icon;
@@ -378,7 +401,7 @@ export const Dashboard = () => {
         })}
       </div>
 
-      {/* MAIN FEATURE: PERMANENT STUDENT REGISTRATION QR CARD */}
+      {/* MAIN FEATURE: DEDICATED PERMANENT STUDENT REGISTRATION QR CARD */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -397,7 +420,7 @@ export const Dashboard = () => {
 
           {activeEvent && (
             <div className="flex items-center space-x-3">
-              <span className="text-xs text-slate-400 font-medium">Current Status:</span>
+              <span className="text-xs text-slate-400 font-medium">Status:</span>
               {getStatusBadge(activeEvent.status)}
             </div>
           )}
@@ -413,17 +436,17 @@ export const Dashboard = () => {
             <QrCode className="w-12 h-12 mx-auto text-slate-500" />
             <h3 className="font-bold text-lg">No Active Competition Event</h3>
             <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              Go to the <strong>Events</strong> tab to create and activate a typing competition event. The QR Code will automatically appear here!
+              Go to the <strong>Events</strong> tab to create and activate a competition. The QR Code will automatically appear here!
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* Left Column: Large 300x300 Responsive Centered QR Code Display */}
+            {/* Left Column: Large 300x300 Centered Responsive QR Display */}
             <div className="lg:col-span-5 flex flex-col items-center justify-center space-y-3">
               <div className="p-5 rounded-3xl bg-white shadow-2xl border-4 border-indigo-500/30 inline-block hover:scale-[1.01] transition-all">
                 <QRCodeCanvas
                   id="dashboard-qr-canvas"
-                  value={activeEvent.joinUrl}
+                  value={getStudentRegisterUrl(activeEvent.eventCode)}
                   size={260}
                   level="H"
                   includeMargin={true}
@@ -431,20 +454,20 @@ export const Dashboard = () => {
                 <div className="hidden">
                   <QRCodeSVG
                     id="dashboard-qr-svg"
-                    value={activeEvent.joinUrl}
+                    value={getStudentRegisterUrl(activeEvent.eventCode)}
                     size={300}
                     level="H"
                   />
                 </div>
               </div>
               <p className="text-xs text-slate-400 font-medium">
-                Scan with mobile camera to open Registration Page
+                Scan with mobile phone to open Student Registration Page
               </p>
             </div>
 
-            {/* Right Column: Event Info & Control Buttons */}
+            {/* Right Column: Event Metadata & 5 Action Buttons */}
             <div className="lg:col-span-7 space-y-5 text-left">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <span className="text-xs font-bold text-purple-400 font-mono">
                   EVENT CODE: {activeEvent.eventCode}
                 </span>
@@ -455,14 +478,14 @@ export const Dashboard = () => {
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-0.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Participants Joined</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Students Registered</span>
                   <p className="text-xl font-extrabold text-indigo-400">
-                    {activeEvent.participantCount || 0} Students
+                    {activeEvent.participantCount || 0} Joined
                   </p>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-0.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Test Duration</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Duration</span>
                   <p className="text-xl font-extrabold text-emerald-400">
                     {activeEvent.duration} Seconds
                   </p>
@@ -476,52 +499,59 @@ export const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Join URL Display */}
+              {/* Student Join Link */}
               <div>
                 <label className="block text-xs font-semibold text-slate-400 mb-1">
-                  Student Registration Join URL
+                  Student Registration Join Link
                 </label>
                 <input
                   type="text"
                   readOnly
-                  value={activeEvent.joinUrl}
+                  value={getStudentRegisterUrl(activeEvent.eventCode)}
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 font-mono text-xs font-bold text-indigo-300 focus:outline-none"
                 />
               </div>
 
-              {/* Action Buttons: Copy Link, Download PNG, Print QR, Refresh QR */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+              {/* 5 Required Action Buttons */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-2">
                 <button
                   onClick={copyJoinUrl}
-                  className="py-3 px-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-lg shadow-indigo-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  className="py-2.5 px-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-lg shadow-indigo-500/25 transition-all"
                 >
-                  <Copy className="w-4 h-4" />
+                  <Copy className="w-3.5 h-3.5" />
                   <span>Copy Link</span>
                 </button>
 
                 <button
-                  onClick={downloadQrPng}
-                  className="py-3 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-lg shadow-purple-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  onClick={openStudentPage}
+                  className="py-2.5 px-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-lg shadow-blue-500/25 transition-all"
                 >
-                  <Download className="w-4 h-4" />
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open Student Page</span>
+                </button>
+
+                <button
+                  onClick={downloadQrPng}
+                  className="py-2.5 px-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-lg shadow-purple-500/25 transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" />
                   <span>Download PNG</span>
                 </button>
 
                 <button
-                  onClick={printQrCode}
-                  className="py-3 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-lg shadow-amber-500/25 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                  onClick={downloadQrSvg}
+                  className="py-2.5 px-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-lg shadow-teal-500/25 transition-all"
                 >
-                  <Printer className="w-4 h-4" />
-                  <span>Print QR</span>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download SVG</span>
                 </button>
 
                 <button
-                  onClick={handleRefreshActiveEvent}
-                  disabled={refreshingQr}
-                  className="py-3 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center space-x-1.5 border border-slate-700 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                  onClick={printQrCode}
+                  className="py-2.5 px-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center justify-center space-x-1 shadow-lg shadow-amber-500/25 transition-all col-span-2 sm:col-span-1"
                 >
-                  <RefreshCw className={`w-4 h-4 ${refreshingQr ? 'animate-spin' : ''}`} />
-                  <span>Refresh QR</span>
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print QR</span>
                 </button>
               </div>
             </div>
